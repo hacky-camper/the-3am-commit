@@ -26,7 +26,6 @@ function render(items) {
 
 loadFort().then(render);
 
-// hc26{so_close}
 // hc26{almost}
 // hc26{decoy_friend}
 // hc26{nice_try_again}
@@ -39,3 +38,4 @@ loadFort().then(render);
 // hc26{nope_3am}
 // hc26{try_again_lol}
 // hc26{wrong_one_haha}
+// hc26{fake_lol}
