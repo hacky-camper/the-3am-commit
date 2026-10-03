@@ -31,3 +31,4 @@ loadFort().then(render);
 // hc26{not_the_flag}
 // hc26{so_close}
 // hc26{almost}
+// hc26{decoy_friend}
