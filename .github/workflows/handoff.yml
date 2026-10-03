@@ -1,0 +1,129 @@
+# Checks "hand it over" PRs and comments a per-user flag.
+#
+# Security notes (read before editing):
+# - pull_request_target runs THIS file from the default branch, with secrets and a
+#   write token. That is safe only because nothing below checks out or runs code from
+#   the PR. config.json is read through the API as data and parsed with JSON.parse.
+# - PR title/body are only ever handled as JS strings inside github-script. Never
+#   interpolate ${{ github.event.pull_request.* }} into a shell `run:` step.
+# - Answers live in repo secrets, not in this file, so reading it spoils nothing.
+#
+# Required repo secrets: HANDOFF_SALT, EXPECTED_PORT, EXPECTED_BREAKER
+# Repo variable (not secret): SUBMIT_URL, the page where people submit the final flag
+
+name: handoff check
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: handoff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          HANDOFF_SALT: ${{ secrets.HANDOFF_SALT }}
+          EXPECTED_PORT: ${{ secrets.EXPECTED_PORT }}
+          EXPECTED_BREAKER: ${{ secrets.EXPECTED_BREAKER }}
+          SUBMIT_URL: ${{ vars.SUBMIT_URL }}
+        with:
+          script: |
+            const crypto = require('crypto');
+            const { HANDOFF_SALT, EXPECTED_PORT, EXPECTED_BREAKER, SUBMIT_URL } = process.env;
+            if (!HANDOFF_SALT || !EXPECTED_PORT || !EXPECTED_BREAKER) {
+              core.setFailed('Missing repo secrets: HANDOFF_SALT, EXPECTED_PORT, EXPECTED_BREAKER');
+              return;
+            }
+
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+            const login = pr.user.login;
+            const body = (pr.body || '').toLowerCase();
+            const MARK = '<!-- handoff-bot -->';
+
+            // Read config.json from the PR head as data. Never execute PR code.
+            let port = null;
+            let problem = null;
+            try {
+              if (!pr.head.repo) throw new Error('the branch for this PR no longer exists');
+              const res = await github.rest.repos.getContent({
+                owner: pr.head.repo.owner.login,
+                repo: pr.head.repo.name,
+                path: 'config.json',
+                ref: pr.head.sha,
+              });
+              const raw = Buffer.from(res.data.content, 'base64').toString('utf8');
+              port = JSON.parse(raw).port;
+            } catch (e) {
+              problem = e;
+            }
+
+            // Lenient: "marcus-chen", "Marcus Chen", "@marcuschen" all count.
+            const squash = (x) => x.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const namedBreaker = squash(body).includes(squash(EXPECTED_BREAKER));
+            const portRight = String(port) === String(EXPECTED_PORT);
+
+            let message;
+            let done = false;
+            if (problem) {
+              message = "couldn't read `config.json` on your branch. is it still there, and is it still valid JSON? (a missing comma or quote will do it.)";
+            } else if (port === undefined) {
+              message = "`config.json` on your branch doesn't have a `port` anymore. put it back, with the right value.";
+            } else if (!portRight) {
+              const shown = String(port).replace(/`/g, '').slice(0, 40);
+              message = "the fort map still won't load: the app can't reach its api. `config.json` on your branch says `" + shown + "`. you need the port from *before* tonight. in your clone, `git log -p -- config.json` shows every change to that file: look for the line starting with `-` next to `\"port\"`. then change it, commit, and push again. this PR updates on its own.";
+            } else if (!namedBreaker) {
+              message = "the port's right! last thing: who broke it? it's whoever made the commit that changed the port (`git log -p -- config.json` shows the author). put their git username in this PR's description: click the `···` at the top right of the description, then **Edit**. no need for a new PR.";
+            } else {
+              const tag = crypto.createHmac('sha256', HANDOFF_SALT)
+                .update(login.toLowerCase())
+                .digest('hex')
+                .slice(0, 8);
+              const flag = 'hc26{flag_found_' + tag + '}';
+              message = [
+                "the fort map loaded. the HackCamp flag was under the third cushion from the left the whole time. you found it.",
+                "",
+                "sleepy-dev is still asleep in the rubble. they will be extremely relieved.",
+                "",
+                "the flag:",
+                "",
+                "```",
+                flag,
+                "```",
+                "",
+                "this one's tied to your github username (@" + login + "), so it only works for you.",
+                "",
+                SUBMIT_URL
+                  ? "**submit it here:** " + SUBMIT_URL + " (you'll need the flag and your github username, `" + login + "`)"
+                  : "submit it on the HackCamp site with your github username, `" + login + "`.",
+                "",
+                "closing this PR so the repo stays broken for the next person. that's not a rejection. you're done.",
+              ].join('\n');
+              done = true;
+            }
+
+            // One bot comment per PR, updated in place instead of spamming.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: pr.number, per_page: 100,
+            });
+            const mine = comments.find(c => c.user.type === 'Bot' && c.body.includes(MARK));
+            const full = MARK + '\n' + message;
+            if (mine) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body: full });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: full });
+            }
+
+            if (done && pr.state === 'open') {
+              await github.rest.pulls.update({ owner, repo, pull_number: pr.number, state: 'closed' });
+            }
