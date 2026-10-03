@@ -2,7 +2,7 @@
 import config from './config.json' with { type: 'json' };
 
 const RETRIES = 8;
-const DEBOUNCE_MS = 150;
+const DEBOUNCE_MS = 200;
 
 async function loadFort() {
   const url = `http://localhost:${config.port}${config.apiBase}/fort`;
