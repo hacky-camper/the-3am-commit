@@ -16,7 +16,7 @@ body {
 
 .card {
   border-radius: var(--radius);
-  box-shadow: 0 2px 12px rgba(74, 53, 38, 0.86);
+  box-shadow: 0 2px 12px rgba(74, 53, 38, 0.92);
 }
 
 .cushion {
