@@ -21,7 +21,7 @@ function render(items) {
   const list = document.querySelector('#fort');
   list.innerHTML = items.length
     ? items.map(i => `<li>${i.name}: ${i.where}</li>`).join('')
-    : '<li class="empty">the fort is empty</li>';
+    : '<li class="empty">its quiet in here</li>';
 }
 
 loadFort().then(render);
