@@ -1,7 +1,7 @@
 // pillowfort: where is everything in the fort
 import config from './config.json' with { type: 'json' };
 
-const RETRIES = 7;
+const RETRIES = 3;
 const DEBOUNCE_MS = 500;
 
 async function loadFort() {
