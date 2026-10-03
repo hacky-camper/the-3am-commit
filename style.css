@@ -11,7 +11,7 @@ body {
   color: var(--ink);
   font-family: system-ui, sans-serif;
   margin: 0;
-  padding: 20px;
+  padding: 12px;
 }
 
 .card {
