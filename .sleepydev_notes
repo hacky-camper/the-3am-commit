@@ -1,0 +1,16 @@
+ok. 3:04am. cannot feel my hands. notes to self:
+
+- app started crashing around 2am. all the errors are in logs/server.log
+  its like 10k lines. do not scroll through it. search it for my markers:
+
+      grep hc26 logs/server.log
+
+  (or open it in a code editor and ctrl+f for hc26)
+
+- the fort collapsed around 1am. the hackcamp flag was on top. now i
+  cant find it anywhere. pillowfort (the app) knows where everything in
+  the fort ended up, but the app is broken too. of course it is
+- need to finish the demo deck
+- stop leaving these everywhere. hc26{hidden_files_are_just_shy}
+
+going to lie down for five minutes
