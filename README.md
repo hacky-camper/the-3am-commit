@@ -9,7 +9,7 @@ a tiny cozy app that keeps track of where everything in the fort is: cushions, b
 > - you'll see three kinds of `{...}` things:
 >   - **markers** like `hc26{a_few_words}`: you're on the right track. don't submit them, just follow what they say.
 >   - **fakes**: sleepy-dev had chatgpt dump a pile of obviously fake flags into the history. ignore them.
->   - **the real flag** looks like `hackcamp2026{found_` followed by 64 letters and numbers `}`. you only get it at the very end, and it's the one thing you submit.
+>   - **the real flag** looks like `hackcamp2026{617_7H3_34M_C0MM17_` followed by 32 letters and numbers `}`. it's not in this repo anywhere: after your fix PR, the bot links you to a claim page that hands it out. it's the one thing you submit.
 > - stuck? the page you came from has a "stuck? skip ahead" section with exact steps.
 > - broke something? delete this folder and clone again. you lose nothing.
 
@@ -54,7 +54,7 @@ you can't push to this repo directly. to propose a fix:
    ```
 4. go to your fork on GitHub. there'll be a banner offering to **Contribute / Open pull request**. click it, fill in the description, and create the pull request.
 
-a bot checks every PR and replies within a minute or two.
+a bot checks every PR and replies within a minute or two. when it says you're done, it links the claim page for the real flag.
 
 ## status
 
