@@ -1,6 +1,6 @@
 {
   "name": "pillowfort",
-  "port": 3001,
+  "port": 8080,
   "apiBase": "/api/v1",
   "theme": "cozy",
   "timeoutMs": 30000
