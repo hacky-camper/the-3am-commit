@@ -1,4 +1,5 @@
-# Checks "hand it over" PRs and comments a per-user flag.
+# Checks "hand it over" PRs and gives feedback. It never issues or prints a flag: solvers claim
+# the flag from the separate claim service (vars.CLAIM_URL), which re-verifies the solve itself.
 #
 # Security notes (read before editing):
 # - pull_request_target runs THIS file from the default branch, with secrets and a
@@ -8,8 +9,8 @@
 #   interpolate ${{ github.event.pull_request.* }} into a shell `run:` step.
 # - Answers live in repo secrets, not in this file, so reading it spoils nothing.
 #
-# Required repo secrets: HANDOFF_SALT, EXPECTED_PORT, EXPECTED_BREAKER
-# Repo variable (not secret): SUBMIT_URL, the page where people submit the final flag
+# Required repo secrets: EXPECTED_PORT, EXPECTED_BREAKER
+# Repo variable (not secret): CLAIM_URL, the claim service page
 
 name: handoff check
 
@@ -32,15 +33,13 @@ jobs:
     steps:
       - uses: actions/github-script@v8
         env:
-          HANDOFF_SALT: ${{ secrets.HANDOFF_SALT }}
           EXPECTED_PORT: ${{ secrets.EXPECTED_PORT }}
           EXPECTED_BREAKER: ${{ secrets.EXPECTED_BREAKER }}
-          SUBMIT_URL: ${{ vars.SUBMIT_URL }}
+          CLAIM_URL: ${{ vars.CLAIM_URL }}
         with:
           script: |
-            const crypto = require('crypto');
-            const { HANDOFF_SALT, EXPECTED_PORT, EXPECTED_BREAKER, SUBMIT_URL } = process.env;
-            const missing = Object.entries({ HANDOFF_SALT, EXPECTED_PORT, EXPECTED_BREAKER })
+            const { EXPECTED_PORT, EXPECTED_BREAKER, CLAIM_URL } = process.env;
+            const missing = Object.entries({ EXPECTED_PORT, EXPECTED_BREAKER })
               .filter(([, v]) => !v).map(([k]) => k);
             if (missing.length) {
               core.setFailed('Missing repo secrets: ' + missing.join(', '));
@@ -88,28 +87,15 @@ jobs:
             } else if (!namedBreaker) {
               message = "the port's right! last thing: who broke it? it's whoever made the commit that changed the port (`git log -p -- config.json` shows the author). put their git username in this PR's title or description (click the `···` at the top right of the description, then **Edit**). no need for a new PR.";
             } else {
-              const tag = crypto.createHmac('sha256', HANDOFF_SALT)
-                .update(login.toLowerCase())
-                .digest('hex');
-              const flag = 'hackcamp2026{found_' + tag + '}';
               message = [
                 "the fort map loaded. the HackCamp flag was under the third cushion from the left the whole time. you found it.",
                 "",
                 "sleepy-dev is still asleep in the rubble. they will be extremely relieved.",
                 "",
-                "the real flag (this is the one you submit):",
+                "**last step: claim the real flag at " + (CLAIM_URL || "the claim page linked on the HackCamp site") + "**",
+                "you'll need your github username (`" + login + "`), this PR's number (**#" + pr.number + "**), and the name of whoever broke it.",
                 "",
-                "```",
-                flag,
-                "```",
-                "",
-                "this one's tied to your github username (@" + login + "), so it only works for you.",
-                "",
-                SUBMIT_URL
-                  ? "**submit it here:** " + SUBMIT_URL + " (you'll need the flag and your github username, `" + login + "`)"
-                  : "submit it on the HackCamp site with your github username, `" + login + "`.",
-                "",
-                "closing this PR so the repo stays broken for the next person, and hiding who broke it from the title and description so they have to dig it up themselves. that's not a rejection. you're done.",
+                "closing this PR so the repo stays broken for the next person, and hiding who broke it from the title and description so they have to dig it up themselves. that's not a rejection. you can still comment here, and the claim page will ask you to.",
               ].join('\n');
               done = true;
             }
